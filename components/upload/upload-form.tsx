@@ -1,84 +1,99 @@
-'use client';
+"use client";
 
-import UploadFormInput from '@/components/upload/upload-form-input';
-import { useUploadThing } from '@/utils/uploadthing';
-import { z } from 'zod';
-import { toast } from 'sonner';
-// import { generatePdfSummary } from '@/actions/upload-actions';
+import { z } from "zod";
+import { UploadFormInput } from "./upload-form-input";
+import { useUploadThing } from "@/utils/uploadthing";
+import { toast } from "sonner";
+import { generatePdfSummary } from "@/actions/upload-actions";
+import type { ourFileRouter } from '@/app/api/uploadthing/core';
+import { ClientUploadedFileData } from "uploadthing/types";
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 
-// Schema for validating the file input using zod
 const schema = z.object({
   file: z
-    .instanceof(File, { message: 'Invalid file' })
-    .refine((file) => file.size < 20 * 1024 * 1024, {
-      message: 'File size should be less than 20MB',
-    })
-    .refine((file) => file.type.startsWith('application/pdf'), {
-      message: 'File must be a PDF',
-    }),
+    .instanceof(File, { message: "Invalid File" })
+    .refine((file) => file.size <= 20 * 1024 * 1024, "File must be < 20MB")
+    .refine((file) => file.type === "application/pdf", "File must be a PDF"),
 });
 
-export default function UploadForm() {
-  const { startUpload, routeConfig } = useUploadThing('pdfUploader', {
+const UploadForm = () => {
+  const [loading, setLoading] = useState<boolean>(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
+  const { startUpload } = useUploadThing("pdfUploader", {
     onClientUploadComplete: () => {
-      console.log('uploaded successfully!');
+      toast.success("Uploaded successfully!");
     },
     onUploadError: (err) => {
-      console.error('error occurred while uploading', err);
-      toast('Error occured while uploading', {
+      console.error("Upload error", err);
+      toast.error("Upload failed", {
         description: err.message,
       });
-    },
-   onUploadBegin: (fileName: string) => {  // Changed to accept string directly
-      console.log('upload has begun for', fileName);
     },
   });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log('Submitted');
+    setLoading((prev: boolean) => !prev);
 
     const formData = new FormData(e.currentTarget);
-    const file = formData.get('file') as File;
+    const file = formData.get("file") as File;
 
-    //validating the fields
-    const validatedFields = schema.safeParse({ file });
-    console.log(validatedFields);
-
-    if (!validatedFields.success) {
-      toast('Something went wrong', {
+    const validation = schema.safeParse({ file });
+    if (!validation.success) {
+      toast.error("Invalid file", {
         description:
-          validatedFields.error.flatten().fieldErrors.file?.[0] ??
-          'Invalid file',
+          validation.error.flatten().fieldErrors.file?.[0] ?? "Invalid file",
       });
       return;
     }
 
-    //upload the file to uploadthing
-    toast('📄 Uploading PDF', {
-      description: 'We are uploading PDF!',
+    toast("Uploading PDF...", {
+      description: "Please wait while we upload your file.",
     });
 
-    const resp = await startUpload([file]);
-    if (!resp) {
-      toast.error('Something went wrong', {
-        description: 'please use different type',
+    const uploadResponse = await startUpload([file]);
+    if (!uploadResponse) {
+      toast.error("Upload failed", {
+        description: "Please try again with a different file.",
       });
       return;
     }
-    toast.info('📄 Procession PDF', {
-      description: 'Hang tight! our AI is processing your document ⚡️',
+
+    toast("Processing PDF...", {
+      description: "Hang tight! We are analyzing your document.",
     });
-    //Parse the pdf using lang chain
-    // const summary = await generatePdfSummary(resp);
-    // console.log('_____   sssssssss    ______    ', { summary });
-    //summarize the pdf using AI
-    //save the summary to the database
-    //redirect to the [id] summary page
+
+    const result = await generatePdfSummary(
+      uploadResponse as unknown as ClientUploadedFileData<typeof ourFileRouter>[]
+    );
+
+    const { success, data, message } = result;
+
+    if (success && data) {
+      toast.success("✨ Summary generated!", {
+        description: "Your PDF has been successfully summarized and saved",
+      });
+      // You might want to do something with the data here, e.g., navigate or display it
+    } else {
+      toast.error(message ?? "Failed to generate summary");
+    }
+
+    setLoading(false);
   };
+
   return (
-    <div>
-      <UploadFormInput onSubmit={handleSubmit} />
-    </div>
-  );
+  <div className="flex flex-col gap-8 w-full max-w-2xl mx-auto">
+    <form ref={formRef} onSubmit={handleSubmit}>
+      <UploadFormInput
+        ref={formRef}
+        onSubmit={handleSubmit} // <-- add this line
+        isLoading={loading}
+      />
+    </form>
+  </div>
+);
 }
+
+export default UploadForm;
