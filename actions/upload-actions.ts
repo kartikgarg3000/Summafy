@@ -1,7 +1,7 @@
 "use server";
 
 import { ourFileRouter } from "@/app/api/uploadthing/core";
-// import { getDbConnection } from "@/lib/db";
+import { getDbConnection } from "@/lib/db";
 import { generateSummaryFromGemini } from "@/lib/geminiai";
 import { fetchAndExtractPdfText } from "@/lib/langchain";
 import { auth } from "@clerk/nextjs/server";
@@ -23,7 +23,7 @@ type StorePdfSummaryResponse = {
 };
 
 export async function generatePdfSummary(
-  uploadResponse: ClientUploadedFileData<typeof ourFileRouter>[]
+  uploadResponse: ClientUploadedFileData<ourFileRouter>[]
 ): Promise<StorePdfSummaryResponse> {
   const fileInfo = uploadResponse?.[0];
 
@@ -62,3 +62,75 @@ export async function generatePdfSummary(
   }
 }
 
+async function savePdfSummary({
+  userId,
+  fileUrl,
+  summary,
+  title,
+  fileName,
+}: PdfSummaryType) {
+  try {
+    const sql = await getDbConnection();
+
+    const result = await sql`
+      INSERT INTO pdf_summaries (user_id, original_file_url, summary_text, title, file_name)
+      VALUES (${userId}, ${fileUrl}, ${summary}, ${title}, ${fileName})
+      RETURNING *;
+    `;
+
+    return result?.[0] ?? null;
+  } catch (error) {
+    console.error("DB save error:", error);
+    return null;
+  }
+}
+
+export async function storePdfSummaryAction({
+  fileUrl,
+  summary,
+  title,
+  fileName,
+}: Omit<PdfSummaryType, "userId">) {
+  let savedSummary: any;
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return {
+        success: false,
+        message: "User not authenticated.",
+      };
+    }
+
+    savedSummary = await savePdfSummary({
+      userId,
+      fileUrl,
+      summary,
+      title,
+      fileName,
+    });
+
+    if (!savedSummary) {
+      return {
+        success: false,
+        message: "Failed to save PDF summary.",
+      };
+    }
+
+
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "error saving PDF Summary"
+
+    }
+  }
+  //reva;idate path
+  revalidatePath(`/summaries/${savedSummary.id}`)
+
+  return {
+    success: true,
+    message: "Summary saved successfully.",
+    data: {savedSummary}
+  };
+}
