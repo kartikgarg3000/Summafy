@@ -4,11 +4,12 @@ import { z } from "zod";
 import { UploadFormInput } from "./upload-form-input";
 import { useUploadThing } from "@/utils/uploadthing";
 import { toast } from "sonner";
-import { generatePdfSummary } from "@/actions/upload-actions";
-import type { ourFileRouter } from '@/app/api/uploadthing/core';
+import { generatePdfSummary, storePdfSummaryAction } from "@/actions/upload-actions";
+import type { ourFileRouter } from '@/app/api/uploadthing/core'
 import { ClientUploadedFileData } from "uploadthing/types";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+
 
 const schema = z.object({
   file: z
@@ -35,7 +36,7 @@ const UploadForm = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading((prev: boolean) => !prev);
+    setLoading((prev: boolean) => !prev)
 
     const formData = new FormData(e.currentTarget);
     const file = formData.get("file") as File;
@@ -65,35 +66,46 @@ const UploadForm = () => {
       description: "Hang tight! We are analyzing your document.",
     });
 
-    const result = await generatePdfSummary(
-      uploadResponse as unknown as ClientUploadedFileData<typeof ourFileRouter>[]
-    );
+    const result = await generatePdfSummary(uploadResponse as unknown as ClientUploadedFileData<ourFileRouter>[]);
 
     const { success, data, message } = result;
 
     if (success && data) {
+      let storeResult: any;
       toast.success("✨ Summary generated!", {
         description: "Your PDF has been successfully summarized and saved",
       });
-      // You might want to do something with the data here, e.g., navigate or display it
-    } else {
-      toast.error(message ?? "Failed to generate summary");
+      try {
+        if (data.summary) {
+          storeResult = await storePdfSummaryAction({
+            summary: data.summary,
+            fileUrl: data.fileUrl,
+            title: data.title,
+            fileName: data.fileName,
+          })
+          setLoading((prev: boolean) => !prev)
+          formRef.current?.reset()
+          router.push(`/summaries/${storeResult.data.savedSummary.id}`)
+        }
+        // TODO: Redirect to summary page
+      }
+      catch (error) {
+        console.error("Error Saving Summary!", error);
+        toast.error("Failed to save summary!");
+      }
     }
+  }
 
-    setLoading(false);
-  };
 
   return (
-  <div className="flex flex-col gap-8 w-full max-w-2xl mx-auto">
-    <form ref={formRef} onSubmit={handleSubmit}>
-      <UploadFormInput
-        ref={formRef}
-        onSubmit={handleSubmit} // <-- add this line
-        isLoading={loading}
-      />
-    </form>
-  </div>
-);
+    <>
+      <div className="flex flex-col gap-8 w-full max-w-2xl mx-auto">
+        <UploadFormInput ref={formRef} onSubmit={handleSubmit} isLoading={loading} />
+      </div>
+    </>
+  );
 }
+
+
 
 export default UploadForm;
