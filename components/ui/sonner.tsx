@@ -22,4 +22,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
   )
 }
 
+<<<<<<< Updated upstream
 export { Toaster }
+=======
+export { Toaster }
+>>>>>>> Stashed changes

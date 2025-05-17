@@ -3,7 +3,11 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const generateSummaryFromGemini = async (pdfText: string) => {
     try {
+<<<<<<< Updated upstream
         const apiKey = process.env.GEMINI_KEY;
+=======
+        const apiKey = process.env.GEMINI_API_KEY;
+>>>>>>> Stashed changes
 
         if (!apiKey) {
             throw new Error("GEMINI_API_KEY is not defined in environment variables.");
@@ -44,4 +48,8 @@ export const generateSummaryFromGemini = async (pdfText: string) => {
         console.error("Error generating summary:", error);
         throw error;
     }
+<<<<<<< Updated upstream
 };
+=======
+};
+>>>>>>> Stashed changes
