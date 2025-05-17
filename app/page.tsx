@@ -18,4 +18,8 @@ export default function Home() {
       
     </div>
   );
+<<<<<<< Updated upstream
 }
+=======
+}
+>>>>>>> Stashed changes

@@ -10,6 +10,7 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+<<<<<<< Updated upstream
   ...compat.config({
     extends: [
       'next/core-web-vitals',
@@ -26,3 +27,9 @@ const eslintConfig = [
 ];
 
 export default eslintConfig;
+=======
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
+];
+
+export default eslintConfig;
+>>>>>>> Stashed changes

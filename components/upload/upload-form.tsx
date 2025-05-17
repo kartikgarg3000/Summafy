@@ -108,4 +108,8 @@ const UploadForm = () => {
 
 
 
+<<<<<<< Updated upstream
 export default UploadForm;
+=======
+export default UploadForm;
+>>>>>>> Stashed changes

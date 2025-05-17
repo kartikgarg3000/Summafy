@@ -6,4 +6,8 @@ export async function getDbConnection(){
     }
     const sql = neon(process.env.DATABASE_URL);
     return sql;
+<<<<<<< Updated upstream
 }
+=======
+}
+>>>>>>> Stashed changes

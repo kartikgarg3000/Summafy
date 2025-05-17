@@ -1,4 +1,5 @@
 const config = {
+<<<<<<< Updated upstream
   plugins: {
     tailwindcss: {},
     autoprefixer: {},
@@ -6,3 +7,9 @@ const config = {
 };
 
 export default config;
+=======
+  plugins: ["@tailwindcss/postcss"],
+};
+
+export default config;
+>>>>>>> Stashed changes
